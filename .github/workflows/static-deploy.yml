@@ -1,0 +1,54 @@
+name: Generate and Deploy Static Site
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start WordPress environment
+        run: docker-compose up -d
+
+      - name: Wait for WordPress to be ready
+        run: |
+          echo "Waiting for WordPress to be ready..."
+          timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8080)" != "200" ]]; do sleep 5; done'
+
+      - name: Install WP-CLI
+        run: |
+          curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x wp-cli.phar
+          sudo mv wp-cli.phar /usr/local/bin/wp
+
+      - name: Install and activate WP2Static
+        run: |
+          docker-compose exec -T wordpress wp plugin install wp2static --activate
+          docker-compose exec -T wordpress wp plugin install wp2static-addon-zip --activate
+
+      - name: Generate static site
+        run: |
+          docker-compose exec -T wordpress wp wp2static generate
+          docker-compose exec -T wordpress wp wp2static post_process
+          docker-compose exec -T wordpress wp wp2static deploy --zip
+
+      - name: Copy static files
+        run: |
+          mkdir -p static
+          docker cp $(docker-compose ps -q wordpress):/var/www/html/wp-content/uploads/wp2static-processed-site/ ./static/
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: wp-static-site
+          directory: static
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }} 
