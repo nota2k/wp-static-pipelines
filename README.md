@@ -16,7 +16,7 @@ Ce projet permet de générer automatiquement une version statique d'un site Wor
 docker-compose up -d
 ```
 
-2. Accéder à WordPress sur http://localhost:8080 et installer le plugin WP2Static
+2. Accéder à WordPress sur http://localhost:8080 et installer le plugin Staatic
 
 3. Configurer les secrets GitHub suivants :
 - `CLOUDFLARE_ACCOUNT_ID`: ID de votre compte Cloudflare
@@ -31,5 +31,5 @@ docker-compose up -d
 ## Workflow
 
 1. Les modifications sont poussées sur la branche main
-2. GitHub Actions génère le site statique avec WP2Static
+2. GitHub Actions génère le site statique avec Staatic
 3. Le site statique est déployé sur Cloudflare Pages
